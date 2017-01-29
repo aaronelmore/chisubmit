@@ -17,7 +17,7 @@ class GradingGitRepo(object):
     @classmethod
     def get_grading_repo(cls, config, course, team, registration):
         base_dir = config.work_dir
-                
+
         repo_path = cls.get_grading_repo_path(base_dir, course, team, registration)
         if not os.path.exists(repo_path):
             return None
@@ -27,7 +27,7 @@ class GradingGitRepo(object):
                 commit_sha = None
             else:
                 commit_sha = registration.final_submission.commit_sha
-                
+
             assert len(repo.remotes) in (1,2)
             assert "origin" in repo.remotes
 
@@ -35,23 +35,23 @@ class GradingGitRepo(object):
                 staging_only = True
             elif len(repo.remotes) == 2:
                 assert "staging" in repo.remotes
-                staging_only = False                
-                
+                staging_only = False
+
             return cls(team, registration, repo, repo_path, commit_sha, staging_only)
 
     @classmethod
     def create_grading_repo(cls, config, course, team, registration, staging_only):
         base_dir = config.work_dir
-        
+
         if not staging_only:
             conn_server = create_connection(course, config)
             if conn_server is None:
                 raise ChisubmitException("Could not connect to git server")
-        
+
         conn_staging = create_connection(course, config, staging = True)
         if conn_staging is None:
-            raise ChisubmitException("Could not connect to git staging server")        
-        
+            raise ChisubmitException("Could not connect to git staging server")
+
         repo_path = cls.get_grading_repo_path(base_dir, course, team, registration)
         staging_url = conn_staging.get_repository_git_url(course, team)
 
@@ -64,14 +64,14 @@ class GradingGitRepo(object):
         if registration.final_submission is None:
             commit_sha = None
         else:
-            commit_sha = registration.final_submission.commit_sha        
+            commit_sha = registration.final_submission.commit_sha
         return cls(team, registration, repo, repo_path, commit_sha, staging_only)
 
-    def sync(self):
+    def sync(self, target_branch="master"):
         self.repo.fetch("origin")
         if not self.staging_only:
             self.repo.fetch("staging")
-        self.repo.reset_branch("origin", "master")
+        self.repo.reset_branch("origin", target_branch)
 
     def create_grading_branch(self):
         branch_name = self.registration.get_grading_branch_name()
@@ -170,5 +170,3 @@ class GradingGitRepo(object):
         # TODO 18DEC14: This code could be a problem
         # The base_dir is passed from far away
         return "%s/repositories/%s/%s/%s" % (base_dir, course.course_id, registration.assignment.assignment_id, team.team_id)
-    
-    
